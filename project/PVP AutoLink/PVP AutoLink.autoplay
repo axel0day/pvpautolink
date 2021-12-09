@@ -28,7 +28,7 @@
 <AlwaysOnTop>0</AlwaysOnTop>
 <Resizable>0</Resizable>
 <MinWidth>250</MinWidth>
-<MinHeight>350</MinHeight>
+<MinHeight>150</MinHeight>
 </WindowOptions>
 <TransparentWindow>
 <TransparentImage/>
@@ -181,11 +181,11 @@
 <IconFilename>pvp.ico</IconFilename>
 <ReplaceVersionInfo>1</ReplaceVersionInfo>
 <FileVer1>1</FileVer1>
-<FileVer2>0</FileVer2>
+<FileVer2>1</FileVer2>
 <FileVer3>0</FileVer3>
 <FileVer4>0</FileVer4>
 <ProductVer1>1</ProductVer1>
-<ProductVer2>0</ProductVer2>
+<ProductVer2>1</ProductVer2>
 <ProductVer3>0</ProductVer3>
 <ProductVer4>0</ProductVer4>
 <Comments>Created with AutoPlay Media Studio</Comments>
@@ -278,7 +278,7 @@
 <Name>On Preload</Name>
 <Args/>
 <Script>--CHECK UPDATES
-local ThisVersion = 100
+local ThisVersion = 110
 local LastVersion = tonumber(HTTP.SubmitSecure("https://raw.githubusercontent.com/axel0day/pvpautolink/main/update/version.txt", {}, SUBMITWEB_GET, 20, 443))
 
 if LastVersion &gt; ThisVersion then
@@ -296,15 +296,14 @@ end
 function Error(Message)
 	Paragraph.SetText("Status", "ERROR: "..Message)
 	Application.Sleep(2000)
-	Application.Exit()
 end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>1</DesignCodeLine>
-<DesignCodeCol>23</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -405,8 +404,8 @@ end</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>2</DesignCodeLine>
-<DesignCodeCol>54</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -707,7 +706,8 @@ end</Script>
 <Event>
 <Name>On Click</Name>
 <Args/>
-<Script>Log("GETTING CLIPBOARD")
+<Script>LinksList = {}
+Log("GETTING CLIPBOARD")
 local URL = Clipboard.GetText()
 Log("SENDING REQUEST TO SERVER")
 local Data = HTTP.SubmitSecure(URL, {}, SUBMITWEB_GET, 60, 443)
@@ -751,11 +751,69 @@ if Data ~= "" then
 			end
 			Log("DECODING KEY")
 			local Decoded = Decode(Key)
-			Log("OPENING LINK")
+			local PastePVPUrl
 			if Decoded:sub(1, 2) == "v=" then
-				File.OpenURL("https://pastepvp.org/?"..Decoded, SW_SHOWNORMAL)
+				PastePVPUrl = "https://pastepvp.org/?"..Decoded
+			elseif Decoded:gsub("https://", ""):gsub("http://", ""):gsub("www.", ""):sub(1, 8) == "pastepvp" then
+				PastePVPUrl = Decoded
 			else
-				File.OpenURL(Decoded, SW_SHOWNORMAL)
+				Log("OPENING LINK")
+				File.OpenURL(Decoded)
+			end
+			if PastePVPUrl ~= nil then
+				OriginalLink = PastePVPUrl
+				Log("GETTING LINKS")
+				local Filename = _TempFolder.."\\"..Crypto.MD5DigestFromString(PastePVPUrl):upper().."PVP.DAT"
+				if PastePVPUrl:sub(1, 5) == "https" then
+					HTTP.DownloadSecure(PastePVPUrl, Filename)
+				else
+					HTTP.Download(PastePVPUrl, Filename)
+				end
+				--SHOW HTML SOURCE
+				local PasteSource = TextFile.ReadToString(Filename)
+				if PasteSource ~= nil then
+					local Start = String.Find(PasteSource, "&lt;title&gt;")
+					local End = String.Find(PasteSource, "&lt;/title&gt;")
+					ContentTitle = PasteSource:sub(Start + 7, End - 1):gsub(" | Multienlaces", "")
+					local Cursor = 1
+					while true do
+						local Start = String.Find(PasteSource, "href=\"http", Cursor)
+						if Start ~= -1 then
+							Start = Start + 6
+							Cursor = Start
+							local End = String.Find(PasteSource, "\"", Start)
+							if End ~= -1 then
+								local ExcludedLinks = {
+									"https://www.programasvirtualespc.net/miembro-vip/",
+									"https://www.programasvirtualespc.net/cuentas-google-drive-ilimitado/",
+									"https://pastepvp.org/"
+								}
+								local CurrentLink = PasteSource:sub(Start, End - 1)
+								local Excluded = false
+								for _, Val in pairs(ExcludedLinks) do
+									if Val == CurrentLink then
+										Excluded = true
+									end
+								end
+								if not Excluded then
+									LinksList[Table.Count(LinksList) + 1] = CurrentLink
+								end
+							end
+						else
+							break
+						end
+					end
+					if Table.Count(LinksList) &gt; 0 and Table.Count(LinksList) &lt; 10 then
+						DialogEx.Show("LinksList")
+					else
+						Log("OPENING LINK")
+						File.OpenURL(PastePVPUrl)
+					end
+				else
+					Log("OPENING LINK")
+					File.OpenURL(PastePVPUrl)
+				end
+				File.Delete(Filename)
 			end
 		else
 			Error("KEY NOT FOUND")
@@ -774,7 +832,7 @@ Log("READY")</Script>
 <TreeState>0</TreeState>
 </TreeStates>
 <DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>24</DesignCodeCol>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -889,9 +947,9 @@ Log("READY")</Script>
 <AutoResize>0</AutoResize>
 <Coordinates>
 <Top>310</Top>
-<Bottom>331</Bottom>
-<Left>40</Left>
-<Right>210</Right>
+<Bottom>330</Bottom>
+<Left>24</Left>
+<Right>226</Right>
 </Coordinates>
 <Ratios>
 <WidthRatio>-1.000000</WidthRatio>
@@ -907,7 +965,7 @@ Log("READY")</Script>
 <TreeState>0</TreeState>
 </TreeStates>
 <DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>52</DesignCodeCol>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -928,28 +986,28 @@ Log("READY")</Script>
 <Event>
 <Name>On Enter</Name>
 <Args/>
-<Script>Label.SetProperties("Web",{FontUnderline=true})</Script>
+<Script>Label.SetProperties(this, {FontUnderline = true})</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
 <DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>47</DesignCodeCol>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
 <Event>
 <Name>On Leave</Name>
 <Args/>
-<Script>Label.SetProperties("Web",{FontUnderline=false})</Script>
+<Script>Label.SetProperties(this, {FontUnderline = false})</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
 <DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>48</DesignCodeCol>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -967,12 +1025,12 @@ Log("READY")</Script>
 </Actions>
 <Text>
 <Body>www.programasvirtualespc.net</Body>
-<NormalColor>10040064</NormalColor>
-<HighlightColor>10040064</HighlightColor>
-<MouseDownColor>10040064</MouseDownColor>
+<NormalColor>8388608</NormalColor>
+<HighlightColor>8388608</HighlightColor>
+<MouseDownColor>8388608</MouseDownColor>
 <DisabledColor>12632256</DisabledColor>
 <FontData>
-<FontName>Segoe UI</FontName>
+<FontName>Consolas</FontName>
 <CharacterSet>0</CharacterSet>
 <Height>-12</Height>
 <Weight>400</Weight>
@@ -990,16 +1048,792 @@ Log("READY")</Script>
 <MouseClickSound/>
 <OriginalRect>
 <Top>310</Top>
-<Bottom>331</Bottom>
-<Left>40</Left>
-<Right>210</Right>
+<Bottom>330</Bottom>
+<Left>24</Left>
+<Right>226</Right>
 </OriginalRect>
 </Text>
 </Object>
 <HGuidelines/>
 <VGuidelines/>
 </Page>
-<SugDialogs/>
+<SugDialogs>
+<PageDialog width="350" height="250" dialog_title="PVP AutoLink" dialog_style="0" movable="1" use_custom_icon="0" custom_icon="" always_on_top="0" resizable="0" min_width="150" min_height="150" fit_custom_mask_to_window="1" custom_mask="">
+<Page>
+<Name>LinksList</Name>
+<InheritObs/>
+<InheritBG/>
+<Description/>
+<Keywords/>
+<Background>
+<Type>0</Type>
+<ImageStyle>0</ImageStyle>
+<TopColor>16711680</TopColor>
+<BottomColor>16777215</BottomColor>
+<UseCustomBackgroundSettings>1</UseCustomBackgroundSettings>
+<TransitionEffect/>
+<TransProps/>
+<NormalImage>
+<Filename/>
+</NormalImage>
+</Background>
+<Event>
+<Name>On Preload</Name>
+<Args/>
+<Script>if type(LinksList) == "table" then
+	local LastSpawned = 0
+	local DefaultProps = Label.GetProperties("Sample")
+	for _, Val in pairs(LinksList) do
+		DialogEx.CreateObject(1, "Link"..LastSpawned + 1, DefaultProps)
+		Label.SetText("Link"..LastSpawned + 1, Val)
+		Label.SetPos("Link"..LastSpawned + 1, 10, 19 * (LastSpawned + 1) + 10)
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Click", DialogEx.GetObjectScript("Sample", "On Click"))
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Enter", DialogEx.GetObjectScript("Sample", "On Enter"))
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Leave", DialogEx.GetObjectScript("Sample", "On Leave"))
+		LastSpawned = LastSpawned + 1
+	end
+	DialogEx.SetObjectZOrder("LabelCut", ZORDER_FRONT)
+	DialogEx.SetObjectZOrder("ButtonCut", ZORDER_FRONT)
+	DialogEx.SetObjectZOrder("Original", ZORDER_FRONT)
+end
+
+Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink - "..ContentTitle)</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Show</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Close</Name>
+<Args/>
+<Script>for _, Val in pairs(DialogEx.EnumerateObjects()) do
+	if Val:sub(1, 4) == "Link" then
+		DialogEx.DeleteObject(Val)
+	end
+end
+
+Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Timer</Name>
+<Args>number e_ID</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Audio</Name>
+<Args>number e_Channel, string e_State</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Key</Name>
+<Args>number e_Key, table e_Modifiers</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Mouse Button</Name>
+<Args>number e_Type, number e_X, number e_Y</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Mouse Move</Name>
+<Args>number e_X, number e_Y</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Mouse Wheel</Name>
+<Args>table e_Flags, number e_Delta, number e_X, number e_Y</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Size</Name>
+<Args>number e_WindowWidth, number e_WindowHeight, number e_DialogWidth, number e_DialogHeight, number e_Type</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Object>
+<Type>1</Type>
+<Name>Title</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>1</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>10</Top>
+<Bottom>29</Bottom>
+<Left>9</Left>
+<Right>153</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>956313088</DesignCodeLine>
+<DesignCodeCol>1073741878</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>3211313</DesignCodeLine>
+<DesignCodeCol>7012398</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>3043941</DesignCodeLine>
+<DesignCodeCol>1080950830</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>859192645</DesignCodeLine>
+<DesignCodeCol>3043840</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<Text>
+<Body>List of detected links:</Body>
+<NormalColor>2147483647</NormalColor>
+<HighlightColor>2147483647</HighlightColor>
+<MouseDownColor>2147483647</MouseDownColor>
+<DisabledColor>12632256</DisabledColor>
+<FontData>
+<FontName>Consolas</FontName>
+<CharacterSet>0</CharacterSet>
+<Height>-11</Height>
+<Weight>400</Weight>
+<Italic>0</Italic>
+<Underline>0</Underline>
+<StrikeOut>0</StrikeOut>
+<AntiAlias>1</AntiAlias>
+</FontData>
+<Alignment>0</Alignment>
+<Orientation>0</Orientation>
+<AutoSize>1</AutoSize>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+<OriginalRect>
+<Top>10</Top>
+<Bottom>29</Bottom>
+<Left>9</Left>
+<Right>153</Right>
+</OriginalRect>
+</Text>
+</Object>
+<Object>
+<Type>1</Type>
+<Name>Sample</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>1</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>1</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>-20</Top>
+<Bottom>-1</Bottom>
+<Left>9</Left>
+<Right>135</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script>File.OpenURL(Label.GetText(this))</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script>Label.SetProperties(this, {FontUnderline = true})</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script>Label.SetProperties(this, {FontUnderline = false})</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<Text>
+<Body>https://example.com/</Body>
+<NormalColor>8388608</NormalColor>
+<HighlightColor>8388608</HighlightColor>
+<MouseDownColor>8388608</MouseDownColor>
+<DisabledColor>12632256</DisabledColor>
+<FontData>
+<FontName>Consolas</FontName>
+<CharacterSet>0</CharacterSet>
+<Height>-11</Height>
+<Weight>400</Weight>
+<Italic>0</Italic>
+<Underline>0</Underline>
+<StrikeOut>0</StrikeOut>
+<AntiAlias>1</AntiAlias>
+</FontData>
+<Alignment>0</Alignment>
+<Orientation>0</Orientation>
+<AutoSize>1</AutoSize>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+<OriginalRect>
+<Top>-20</Top>
+<Bottom>-1</Bottom>
+<Left>9</Left>
+<Right>135</Right>
+</OriginalRect>
+</Text>
+</Object>
+<Object>
+<Type>3</Type>
+<Name>LabelCut</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>0</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>1</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>0</Top>
+<Bottom>250</Bottom>
+<Left>340</Left>
+<Right>350</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>9</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>1819042147</DesignCodeLine>
+<DesignCodeCol>121</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>3211313</DesignCodeLine>
+<DesignCodeCol>7012398</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<NormalImage>
+<Filename>pvp.dat</Filename>
+<UseTransColor>0</UseTransColor>
+<TransClr>16777215</TransClr>
+<TransTolerance>10</TransTolerance>
+<Opacity>100</Opacity>
+<HTMode>0</HTMode>
+</NormalImage>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+</Object>
+<Object>
+<Type>3</Type>
+<Name>ButtonCut</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>0</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>0</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>200</Top>
+<Bottom>250</Bottom>
+<Left>220</Left>
+<Right>350</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>9</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>1819042147</DesignCodeLine>
+<DesignCodeCol>121</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>3211313</DesignCodeLine>
+<DesignCodeCol>7012398</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<NormalImage>
+<Filename>pvp.dat</Filename>
+<UseTransColor>0</UseTransColor>
+<TransClr>16777215</TransClr>
+<TransTolerance>10</TransTolerance>
+<Opacity>100</Opacity>
+<HTMode>0</HTMode>
+</NormalImage>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+</Object>
+<Object>
+<Type>20</Type>
+<Name>Original</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>1</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>0</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>210</Top>
+<Bottom>240</Bottom>
+<Left>230</Left>
+<Right>340</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script>File.OpenURL(OriginalLink)</Script>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Hyperlink</Name>
+<Args>string e_Hyperlink</Args>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<Options>
+<Text>Open Original</Text>
+<TextColor format="hex">000000</TextColor>
+<EnableMarkup>0</EnableMarkup>
+<ButtonImage/>
+<TextAlignment>2</TextAlignment>
+<ImageAlignment>0</ImageAlignment>
+<ImageTextRelation>3</ImageTextRelation>
+<Theme>2</Theme>
+<Style>0</Style>
+<State>0</State>
+<MouseOverSoundMode>0</MouseOverSoundMode>
+<MouseOverSound/>
+<MouseClickSoundMode>0</MouseClickSoundMode>
+<MouseClickSound/>
+</Options>
+<FontData>
+<FontName>Consolas</FontName>
+<CharacterSet>0</CharacterSet>
+<Height>-12</Height>
+<Weight>400</Weight>
+<Italic>0</Italic>
+<Underline>0</Underline>
+<StrikeOut>0</StrikeOut>
+<AntiAlias>1</AntiAlias>
+</FontData>
+</Object>
+<HGuidelines/>
+<VGuidelines/>
+</Page>
+</PageDialog>
+</SugDialogs>
 <MissingTechs>
 <DlgTitle>Missing Technologies</DlgTitle>
 <DlgMsg>This program requires the following technologies which cannot be located on your system.
