@@ -277,25 +277,40 @@
 <Event>
 <Name>On Preload</Name>
 <Args/>
-<Script>--CHECK UPDATES
-local ThisVersion = 110
+<Script>local ThisVersion = 111
 local LastVersion = tonumber(HTTP.SubmitSecure("https://raw.githubusercontent.com/axel0day/pvpautolink/main/update/version.txt", {}, SUBMITWEB_GET, 20, 443))
-
 if LastVersion &gt; ThisVersion then
 	File.Run("updater.exe", "\"PVP AutoLink\" \"pvp\" \"https://github.com/axel0day/pvpautolink/raw/main/update/package.zip\" \"".._SourceFolder.."\"", _SourceFolder, SW_SHOWNORMAL, false)
 	Application.Exit()
 end
-
 Application.LoadActionPlugin("pvp.dll")
-
 function Log(Message)
 	Application.Sleep(Math.Random(100, 250))
 	Paragraph.SetText("Status", Message)
 end
-
 function Error(Message)
 	Paragraph.SetText("Status", "ERROR: "..Message)
 	Application.Sleep(2000)
+end
+if not Registry.DoesKeyExist(HKEY_CURRENT_USER, "Software\\PVP AutoLink") then
+	Registry.CreateKey(HKEY_CURRENT_USER, "Software\\PVP AutoLink")
+	Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "LIGHT", REG_SZ)
+	Theme = "LIGHT"
+else
+	Theme = Registry.GetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme"):upper()
+end
+if Theme == "DARK" then
+	local Contrast = Math.HexColorToNumber("FFFFFF")
+	local Hyperlink = Math.HexColorToNumber("3366FF")
+	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
+	Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+else
+	local Contrast = Math.HexColorToNumber("000000")
+	local Hyperlink = Math.HexColorToNumber("000080")
+	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
+	Button.SetProperties("Detect", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
 end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
@@ -398,6 +413,30 @@ end</Script>
 	if System.IsKeyDown(16) then
 		Dialog.Message("Credits", "PVP AutoLink by Axel0Day.")
 	end
+end
+if e_Key == 84 then
+	if System.IsKeyDown(16) then
+		if Theme == "LIGHT" then
+			Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "DARK", REG_SZ)
+			Theme = "DARK"
+		else
+			Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "LIGHT", REG_SZ)
+			Theme = "LIGHT"
+		end
+		if Theme == "DARK" then
+			local Contrast = Math.HexColorToNumber("FFFFFF")
+			local Hyperlink = Math.HexColorToNumber("3366FF")
+			Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
+			Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+			Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+		else
+			local Contrast = Math.HexColorToNumber("000000")
+			local Hyperlink = Math.HexColorToNumber("000080")
+			Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
+			Button.SetProperties("Detect", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+			Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+		end
+	end
 end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
@@ -459,7 +498,7 @@ end</Script>
 <Locked>0</Locked>
 <Enabled>1</Enabled>
 <ToolTip/>
-<Cursor>0</Cursor>
+<Cursor>1</Cursor>
 <Group>0</Group>
 <MaintainAspectRatio>1</MaintainAspectRatio>
 <Pin>0</Pin>
@@ -478,7 +517,7 @@ end</Script>
 <Event>
 <Name>On Click</Name>
 <Args/>
-<Script/>
+<Script>File.OpenURL("https://github.com/axel0day/pvpautolink")</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
@@ -680,22 +719,22 @@ end</Script>
 </Text>
 </Object>
 <Object>
-<Type>20</Type>
+<Type>0</Type>
 <Name>Detect</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
 <VisibleAtRunTime>1</VisibleAtRunTime>
 <Locked>0</Locked>
 <Enabled>1</Enabled>
 <ToolTip/>
-<Cursor>0</Cursor>
+<Cursor>1</Cursor>
 <Group>0</Group>
 <MaintainAspectRatio>0</MaintainAspectRatio>
 <Pin>0</Pin>
 <TabIndex>-1</TabIndex>
 <AutoResize>0</AutoResize>
 <Coordinates>
-<Top>258</Top>
-<Bottom>281</Bottom>
+<Top>255</Top>
+<Bottom>285</Bottom>
 <Left>88</Left>
 <Right>163</Right>
 </Coordinates>
@@ -769,7 +808,6 @@ if Data ~= "" then
 				else
 					HTTP.Download(PastePVPUrl, Filename)
 				end
-				--SHOW HTML SOURCE
 				local PasteSource = TextFile.ReadToString(Filename)
 				if PasteSource ~= nil then
 					local Start = String.Find(PasteSource, "&lt;title&gt;")
@@ -784,8 +822,9 @@ if Data ~= "" then
 							local End = String.Find(PasteSource, "\"", Start)
 							if End ~= -1 then
 								local ExcludedLinks = {
-									"https://www.programasvirtualespc.net/miembro-vip/",
+									"https://www.programasvirtualespc.net/cuentas-mega-nz-sin-limite-de-descarga/",
 									"https://www.programasvirtualespc.net/cuentas-google-drive-ilimitado/",
+									"https://www.programasvirtualespc.net/miembro-vip/",
 									"https://pastepvp.org/"
 								}
 								local CurrentLink = PasteSource:sub(Start, End - 1)
@@ -824,7 +863,6 @@ if Data ~= "" then
 else
 	Error("NO RESPONSE RECEIVED")
 end
-
 Log("READY")</Script>
 <TreeStates>
 <TreeState>0</TreeState>
@@ -878,20 +916,6 @@ Log("READY")</Script>
 <BookMarks count="0">
 </BookMarks>
 </Event>
-<Event>
-<Name>On Hyperlink</Name>
-<Args>string e_Hyperlink</Args>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-<DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
 <Actions>
 <Action>
 <Type>0</Type>
@@ -904,22 +928,16 @@ Log("READY")</Script>
 </TreeStates>
 </Action>
 </Actions>
-<Options>
-<Text>Detect</Text>
-<TextColor format="hex">000000</TextColor>
-<EnableMarkup>0</EnableMarkup>
-<ButtonImage/>
-<TextAlignment>2</TextAlignment>
-<ImageAlignment>0</ImageAlignment>
-<ImageTextRelation>3</ImageTextRelation>
-<Theme>2</Theme>
+<BUTTON>
+<Filename>pvp.tlb</Filename>
 <Style>0</Style>
 <State>0</State>
-<MouseOverSoundMode>0</MouseOverSoundMode>
-<MouseOverSound/>
-<MouseClickSoundMode>0</MouseClickSoundMode>
-<MouseClickSound/>
-</Options>
+<Caption>Detect</Caption>
+<Align>1</Align>
+<UpColor>0</UpColor>
+<HighlightColor>0</HighlightColor>
+<DownColor>0</DownColor>
+<DisabledColor>0</DisabledColor>
 <FontData>
 <FontName>Consolas</FontName>
 <CharacterSet>0</CharacterSet>
@@ -930,6 +948,15 @@ Log("READY")</Script>
 <StrikeOut>0</StrikeOut>
 <AntiAlias>1</AntiAlias>
 </FontData>
+<CapXOff>0</CapXOff>
+<CapYOff>0</CapYOff>
+<LeftMargin>0</LeftMargin>
+<RightMargin>0</RightMargin>
+<MouseOverSndMode>1</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>1</MouseClickSndMode>
+<MouseClickSound/>
+</BUTTON>
 </Object>
 <Object>
 <Type>1</Type>
@@ -1080,16 +1107,35 @@ Log("READY")</Script>
 <Event>
 <Name>On Preload</Name>
 <Args/>
-<Script>if type(LinksList) == "table" then
+<Script>if Theme == "DARK" then
+	local Contrast = Math.HexColorToNumber("FFFFFF")
+	local Hyperlink = Math.HexColorToNumber("3366FF")
+	Application.SetDialogProperties("LinksList", {BackgroundColor = Math.HexColorToNumber("111111")})
+	Button.SetProperties("Original", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Title", {ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	Image.Load("ButtonCut", "pvp.tsd")
+	Image.Load("LabelCut", "pvp.tsd")
+else
+	local Contrast = Math.HexColorToNumber("000000")
+	local Hyperlink = Math.HexColorToNumber("000080")
+	Application.SetDialogProperties("LinksList", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
+	Button.SetProperties("Original", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Title", {ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	Image.Load("ButtonCut", "pvp.tsl")
+	Image.Load("LabelCut", "pvp.tsl")
+end
+if type(LinksList) == "table" then
 	local LastSpawned = 0
-	local DefaultProps = Label.GetProperties("Sample")
+	local DefaultProps = Label.GetProperties("Web")
 	for _, Val in pairs(LinksList) do
 		DialogEx.CreateObject(1, "Link"..LastSpawned + 1, DefaultProps)
 		Label.SetText("Link"..LastSpawned + 1, Val)
 		Label.SetPos("Link"..LastSpawned + 1, 10, 19 * (LastSpawned + 1) + 10)
-		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Click", DialogEx.GetObjectScript("Sample", "On Click"))
-		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Enter", DialogEx.GetObjectScript("Sample", "On Enter"))
-		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Leave", DialogEx.GetObjectScript("Sample", "On Leave"))
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Click", DialogEx.GetObjectScript("Web", "On Click"))
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Enter", DialogEx.GetObjectScript("Web", "On Enter"))
+		DialogEx.SetObjectScript("Link"..LastSpawned + 1, "On Leave", DialogEx.GetObjectScript("Web", "On Leave"))
 		LastSpawned = LastSpawned + 1
 	end
 	DialogEx.SetObjectZOrder("LabelCut", ZORDER_FRONT)
@@ -1273,8 +1319,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>956313088</DesignCodeLine>
-<DesignCodeCol>1073741878</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1287,8 +1333,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>3211313</DesignCodeLine>
-<DesignCodeCol>7012398</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1301,8 +1347,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>3043941</DesignCodeLine>
-<DesignCodeCol>1080950830</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1315,8 +1361,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>859192645</DesignCodeLine>
-<DesignCodeCol>3043840</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1365,7 +1411,7 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 </Object>
 <Object>
 <Type>1</Type>
-<Name>Sample</Name>
+<Name>Web</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
 <VisibleAtRunTime>1</VisibleAtRunTime>
 <Locked>0</Locked>
@@ -1519,7 +1565,7 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>9</DesignCodeLine>
+<DesignCodeLine>0</DesignCodeLine>
 <DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
@@ -1533,8 +1579,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>1819042147</DesignCodeLine>
-<DesignCodeCol>121</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1561,8 +1607,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>3211313</DesignCodeLine>
-<DesignCodeCol>7012398</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1579,7 +1625,7 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 </Action>
 </Actions>
 <NormalImage>
-<Filename>pvp.dat</Filename>
+<Filename>pvp.tsl</Filename>
 <UseTransColor>0</UseTransColor>
 <TransClr>16777215</TransClr>
 <TransTolerance>10</TransTolerance>
@@ -1624,7 +1670,7 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>9</DesignCodeLine>
+<DesignCodeLine>0</DesignCodeLine>
 <DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
@@ -1638,8 +1684,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>1819042147</DesignCodeLine>
-<DesignCodeCol>121</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1666,8 +1712,8 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>3211313</DesignCodeLine>
-<DesignCodeCol>7012398</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -1684,7 +1730,7 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 </Action>
 </Actions>
 <NormalImage>
-<Filename>pvp.dat</Filename>
+<Filename>pvp.tsl</Filename>
 <UseTransColor>0</UseTransColor>
 <TransClr>16777215</TransClr>
 <TransTolerance>10</TransTolerance>
@@ -1697,14 +1743,14 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <MouseClickSound/>
 </Object>
 <Object>
-<Type>20</Type>
+<Type>0</Type>
 <Name>Original</Name>
 <VisibleAtDesignTime>1</VisibleAtDesignTime>
 <VisibleAtRunTime>1</VisibleAtRunTime>
 <Locked>0</Locked>
 <Enabled>1</Enabled>
 <ToolTip/>
-<Cursor>0</Cursor>
+<Cursor>1</Cursor>
 <Group>0</Group>
 <MaintainAspectRatio>0</MaintainAspectRatio>
 <Pin>0</Pin>
@@ -1776,20 +1822,6 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <BookMarks count="0">
 </BookMarks>
 </Event>
-<Event>
-<Name>On Hyperlink</Name>
-<Args>string e_Hyperlink</Args>
-<Script/>
-<TreeStates>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-<TreeState>0</TreeState>
-</TreeStates>
-<DesignCodeLine>0</DesignCodeLine>
-<DesignCodeCol>0</DesignCodeCol>
-<BookMarks count="0">
-</BookMarks>
-</Event>
 <Actions>
 <Action>
 <Type>0</Type>
@@ -1802,22 +1834,16 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 </TreeStates>
 </Action>
 </Actions>
-<Options>
-<Text>Open Original</Text>
-<TextColor format="hex">000000</TextColor>
-<EnableMarkup>0</EnableMarkup>
-<ButtonImage/>
-<TextAlignment>2</TextAlignment>
-<ImageAlignment>0</ImageAlignment>
-<ImageTextRelation>3</ImageTextRelation>
-<Theme>2</Theme>
+<BUTTON>
+<Filename>pvp.tlb</Filename>
 <Style>0</Style>
 <State>0</State>
-<MouseOverSoundMode>0</MouseOverSoundMode>
-<MouseOverSound/>
-<MouseClickSoundMode>0</MouseClickSoundMode>
-<MouseClickSound/>
-</Options>
+<Caption>Open Original</Caption>
+<Align>1</Align>
+<UpColor>0</UpColor>
+<HighlightColor>0</HighlightColor>
+<DownColor>0</DownColor>
+<DisabledColor>0</DisabledColor>
 <FontData>
 <FontName>Consolas</FontName>
 <CharacterSet>0</CharacterSet>
@@ -1828,6 +1854,15 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <StrikeOut>0</StrikeOut>
 <AntiAlias>1</AntiAlias>
 </FontData>
+<CapXOff>0</CapXOff>
+<CapYOff>0</CapYOff>
+<LeftMargin>0</LeftMargin>
+<RightMargin>0</RightMargin>
+<MouseOverSndMode>1</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>1</MouseClickSndMode>
+<MouseClickSound/>
+</BUTTON>
 </Object>
 <HGuidelines/>
 <VGuidelines/>

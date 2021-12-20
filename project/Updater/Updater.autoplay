@@ -281,7 +281,6 @@
 	Application.Sleep(Math.Random(100, 250))
 	Paragraph.SetText("Status", Message)
 end
-
 function Error(Message)
 	Paragraph.SetText("Status", "ERROR: "..Message)
 	Application.Sleep(2000)
@@ -292,8 +291,8 @@ end</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>9</DesignCodeLine>
-<DesignCodeCol>3</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -301,7 +300,6 @@ end</Script>
 <Name>On Show</Name>
 <Args/>
 <Script>Application.Sleep(1500)
-
 local function Download(BytesRead, FileSize, _1, _2, _3, Message)
 	Log("DOWNLOADING\n"..String.Replace(Message:upper(), ".", ""))
 	if BytesRead &gt; 0 then
@@ -317,7 +315,6 @@ local function Download(BytesRead, FileSize, _1, _2, _3, Message)
 		Progress.SetCurrentPos("Progress", Percent)
 	end
 end
-
 local function Extract(CurFile, Percent, Status)
 	Paragraph.SetText("CurFile", "..."..CurFile:sub(CurFile:len() - 19, CurFile:len()))
 	if Status == ZIP_STATUS_MAJOR then
@@ -328,8 +325,6 @@ local function Extract(CurFile, Percent, Status)
 	end
 	return true
 end
-
---MAIN
 if Table.Count(_CommandLineArgs) == 4 then
 	Window.SetText(Application.GetWndHandle(), "Update ".._CommandLineArgs[1])
 	if File.DoesExist(_CommandLineArgs[2]..".png") then
@@ -340,7 +335,6 @@ if Table.Count(_CommandLineArgs) == 4 then
 	if not Folder.DoesExist(_CommandLineArgs[4]) then
 		Folder.Create(_CommandLineArgs[4])
 	end
-	--DOWNLOAD PACKAGE
 	local Mode = {}
 	local PackageFile = _TempFolder.."\\"..Math.Random(10000, 99999).._CommandLineArgs[2]..".zip"
 	if _CommandLineArgs[3]:sub(1, 5) == "https" then
@@ -378,8 +372,8 @@ end</Script>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>38</DesignCodeLine>
-<DesignCodeCol>35</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
