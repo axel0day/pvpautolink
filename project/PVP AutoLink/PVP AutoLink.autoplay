@@ -123,14 +123,73 @@
 <Event>
 <Name>On Startup</Name>
 <Args/>
-<Script/>
+<Script>if File.DoesExist(_SourceFolder.."\\updater.zip") then
+	Application.Sleep(1000)
+	Zip.Extract(_SourceFolder.."\\updater.zip", {"*.*"}, _SourceFolder, true, true, "", ZIP_OVERWRITE_ALWAYS)
+	File.Delete(_SourceFolder.."\\updater.zip")
+end
+if type(_CommandLineArgs[1]) == "string" then
+	local Command = _CommandLineArgs[1]
+	if Command == "/?" then
+		Dialog.Message("PVP AutoLink", "Command line usage:\npvp.exe [link]")
+		Application.Exit()
+	elseif Command:sub(1, 4) == "http" then
+		local URL = Command
+		local Data = HTTP.SubmitSecure(URL, {}, SUBMITWEB_GET, 60, 443)
+		if Data ~= "" then
+			local Start = String.Find(Data, "https://www.programasvirtualespc.net/out/?", 1, true)
+			if Start ~= -1 then
+				local End = String.Find(Data, "\"", Start, true)
+				if End ~= -1 then
+					local Link = String.Mid(Data, Start, (End) - Start)
+					local Start = String.ReverseFind(Link, "/", true)
+					local End = Link:len() - Start
+					local Key = String.Mid(Link, Start + 1, End)
+					if Key:sub(1, 1) == "?" then
+						Key = Key:sub(2, Key:len())
+					end
+					local Dic = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+					local function Decode(Key)
+						Key = string.gsub(Key, '[^'..Dic..'=]', '')
+						return (Key:gsub('.', function (X)
+							if (X == '=') then
+								return ''
+							end
+							local R, F = '', (Dic:find(X) - 1)
+							for I = 6, 1, -1 do
+								R = R..(F % 2 ^ I - F % 2 ^ (I - 1) &gt; 0 and '1' or '0')
+							end
+							return R
+						end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function (X)
+							if (#X ~= 8) then
+								return ''
+							end
+							local C = 0
+							for I = 1, 8 do
+								C = C + (X:sub(I, I) == '1' and 2 ^ (8 - I) or 0)
+							end
+							return string.char(C)
+						end))
+					end
+					local Decoded = Decode(Key)
+					if Decoded:sub(1, 2) == "v=" then
+						File.OpenURL("https://pastepvp.org/?"..Decoded)
+					else
+						File.OpenURL(Decoded)
+					end
+				end
+			end
+		end
+		Application.Exit()
+	end
+end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
 </TreeStates>
-<DesignCodeLine>1761607680</DesignCodeLine>
-<DesignCodeCol>3678319</DesignCodeCol>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>0</DesignCodeCol>
 <BookMarks count="0">
 </BookMarks>
 </Event>
@@ -181,11 +240,11 @@
 <IconFilename>pvp.ico</IconFilename>
 <ReplaceVersionInfo>1</ReplaceVersionInfo>
 <FileVer1>1</FileVer1>
-<FileVer2>1</FileVer2>
+<FileVer2>2</FileVer2>
 <FileVer3>0</FileVer3>
 <FileVer4>0</FileVer4>
 <ProductVer1>1</ProductVer1>
-<ProductVer2>1</ProductVer2>
+<ProductVer2>2</ProductVer2>
 <ProductVer3>0</ProductVer3>
 <ProductVer4>0</ProductVer4>
 <Comments>Created with AutoPlay Media Studio</Comments>
@@ -277,7 +336,7 @@
 <Event>
 <Name>On Preload</Name>
 <Args/>
-<Script>local ThisVersion = 111
+<Script>local ThisVersion = 120
 local LastVersion = tonumber(HTTP.SubmitSecure("https://raw.githubusercontent.com/axel0day/pvpautolink/main/update/version.txt", {}, SUBMITWEB_GET, 20, 443))
 if LastVersion &gt; ThisVersion then
 	File.Run("updater.exe", "\"PVP AutoLink\" \"pvp\" \"https://github.com/axel0day/pvpautolink/raw/main/update/package.zip\" \"".._SourceFolder.."\"", _SourceFolder, SW_SHOWNORMAL, false)
@@ -299,12 +358,17 @@ if not Registry.DoesKeyExist(HKEY_CURRENT_USER, "Software\\PVP AutoLink") then
 else
 	Theme = Registry.GetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme"):upper()
 end
+if Registry.GetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "ThemeDemo"):upper() ~= "FALSE" then
+	Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "ThemeDemo", "FALSE", REG_SZ)
+	ThemeDemo = true
+end
 if Theme == "DARK" then
 	local Contrast = Math.HexColorToNumber("FFFFFF")
 	local Hyperlink = Math.HexColorToNumber("3366FF")
 	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
 	Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
 	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	ThemeDemo = false
 else
 	local Contrast = Math.HexColorToNumber("000000")
 	local Hyperlink = Math.HexColorToNumber("000080")
@@ -325,7 +389,48 @@ end</Script>
 <Event>
 <Name>On Show</Name>
 <Args/>
-<Script/>
+<Script>if ThemeDemo then
+	Image.SetVisible("KeyCut")
+	Label.SetVisible("Key")
+	for Opacity = 100, 0, -1 do
+		Image.SetOpacity("KeyCut", Opacity)
+		Application.Sleep(5)
+	end
+	Application.Sleep(250)
+	Image.SetOpacity("KeyCut", 50)
+	Application.Sleep(50)
+	Application.SetRedraw(false)
+	local Contrast = Math.HexColorToNumber("FFFFFF")
+	local Hyperlink = Math.HexColorToNumber("3366FF")
+	Image.Load("KeyCut", "pvp.tsd")
+	Label.SetProperties("Key", {ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
+	Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	Application.SetRedraw(true)
+	Application.Sleep(50)
+	Image.SetOpacity("KeyCut", 0)
+	Application.Sleep(2000)
+	Image.SetOpacity("KeyCut", 50)
+	Application.Sleep(50)
+	Application.SetRedraw(false)
+	local Contrast = Math.HexColorToNumber("000000")
+	local Hyperlink = Math.HexColorToNumber("000080")
+	Image.Load("KeyCut", "pvp.tsl")
+	Label.SetProperties("Key", {ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
+	Button.SetProperties("Detect", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+	Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	Application.SetRedraw(true)
+	Application.Sleep(50)
+	Image.SetOpacity("KeyCut", 0)
+end
+for Opacity = 1, 100 do
+	Image.SetOpacity("KeyCut", Opacity)
+	Application.Sleep(5)
+end
+Label.SetVisible("Key", false)
+Image.SetVisible("KeyCut", false)</Script>
 <TreeStates>
 <TreeState>0</TreeState>
 <TreeState>0</TreeState>
@@ -409,34 +514,32 @@ end</Script>
 <Event>
 <Name>On Key</Name>
 <Args>number e_Key, table e_Modifiers</Args>
-<Script>if e_Key == 67 then
-	if System.IsKeyDown(16) then
-		Dialog.Message("Credits", "PVP AutoLink by Axel0Day.")
+<Script>Application.Sleep(150)
+if e_Key == 112 then
+	Dialog.Message("Help", "- PVP AutoLink\nCopy the URL of the post.\nGo to PVP AutoLink and click Detect.\nWait while the program searches for the links.\n\n- Hotkeys\nF1 - Show this message.\nF2 - Toggle theme.\nF3 - Show credits.")
+elseif e_Key == 113 then
+	if Theme == "LIGHT" then
+		Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "DARK", REG_SZ)
+		Theme = "DARK"
+	else
+		Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "LIGHT", REG_SZ)
+		Theme = "LIGHT"
 	end
-end
-if e_Key == 84 then
-	if System.IsKeyDown(16) then
-		if Theme == "LIGHT" then
-			Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "DARK", REG_SZ)
-			Theme = "DARK"
-		else
-			Registry.SetValue(HKEY_CURRENT_USER, "Software\\PVP AutoLink", "Theme", "LIGHT", REG_SZ)
-			Theme = "LIGHT"
-		end
-		if Theme == "DARK" then
-			local Contrast = Math.HexColorToNumber("FFFFFF")
-			local Hyperlink = Math.HexColorToNumber("3366FF")
-			Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
-			Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
-			Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
-		else
-			local Contrast = Math.HexColorToNumber("000000")
-			local Hyperlink = Math.HexColorToNumber("000080")
-			Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
-			Button.SetProperties("Detect", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
-			Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
-		end
+	if Theme == "DARK" then
+		local Contrast = Math.HexColorToNumber("FFFFFF")
+		local Hyperlink = Math.HexColorToNumber("3366FF")
+		Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
+		Button.SetProperties("Detect", {ButtonFile = "pvp.tdb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+		Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
+	else
+		local Contrast = Math.HexColorToNumber("000000")
+		local Hyperlink = Math.HexColorToNumber("000080")
+		Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("FFFFFF")})
+		Button.SetProperties("Detect", {ButtonFile = "pvp.tlb", ColorNormal = Contrast, ColorHighlight = Contrast, ColorDown = Contrast})
+		Label.SetProperties("Web", {ColorNormal = Hyperlink, ColorHighlight = Hyperlink, ColorDown = Hyperlink})
 	end
+elseif e_Key == 114 then
+	Dialog.Message("Credits", "PVP AutoLink by @axel0day.")
 end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
@@ -1081,6 +1184,234 @@ Log("READY")</Script>
 </OriginalRect>
 </Text>
 </Object>
+<Object>
+<Type>1</Type>
+<Name>Key</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>0</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>1</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>10</Top>
+<Bottom>35</Bottom>
+<Left>10</Left>
+<Right>34</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>3225149</DesignCodeLine>
+<DesignCodeCol>7</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>11886</DesignCodeLine>
+<DesignCodeCol>243</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>859192645</DesignCodeLine>
+<DesignCodeCol>256</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>279</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<Text>
+<Body>F2</Body>
+<NormalColor>0</NormalColor>
+<HighlightColor>0</HighlightColor>
+<MouseDownColor>0</MouseDownColor>
+<DisabledColor>12632256</DisabledColor>
+<FontData>
+<FontName>Consolas</FontName>
+<CharacterSet>0</CharacterSet>
+<Height>-16</Height>
+<Weight>700</Weight>
+<Italic>0</Italic>
+<Underline>0</Underline>
+<StrikeOut>0</StrikeOut>
+<AntiAlias>1</AntiAlias>
+</FontData>
+<Alignment>0</Alignment>
+<Orientation>0</Orientation>
+<AutoSize>1</AutoSize>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+<OriginalRect>
+<Top>10</Top>
+<Bottom>35</Bottom>
+<Left>10</Left>
+<Right>34</Right>
+</OriginalRect>
+</Text>
+</Object>
+<Object>
+<Type>3</Type>
+<Name>KeyCut</Name>
+<VisibleAtDesignTime>1</VisibleAtDesignTime>
+<VisibleAtRunTime>0</VisibleAtRunTime>
+<Locked>0</Locked>
+<Enabled>1</Enabled>
+<ToolTip/>
+<Cursor>0</Cursor>
+<Group>0</Group>
+<MaintainAspectRatio>1</MaintainAspectRatio>
+<Pin>0</Pin>
+<TabIndex>-1</TabIndex>
+<AutoResize>0</AutoResize>
+<Coordinates>
+<Top>10</Top>
+<Bottom>35</Bottom>
+<Left>10</Left>
+<Right>34</Right>
+</Coordinates>
+<Ratios>
+<WidthRatio>-1.000000</WidthRatio>
+<HeightRatio>-1.000000</HeightRatio>
+</Ratios>
+<Event>
+<Name>On Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>222167050</DesignCodeLine>
+<DesignCodeCol>3670026</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Right-Click</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>7563118</DesignCodeLine>
+<DesignCodeCol>2573</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Enter</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>0</DesignCodeLine>
+<DesignCodeCol>54</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Event>
+<Name>On Leave</Name>
+<Args/>
+<Script/>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+<DesignCodeLine>1040215913</DesignCodeLine>
+<DesignCodeCol>2573</DesignCodeCol>
+<BookMarks count="0">
+</BookMarks>
+</Event>
+<Actions>
+<Action>
+<Type>0</Type>
+<Name>None</Name>
+<Exit>0</Exit>
+<TreeStates>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+<TreeState>0</TreeState>
+</TreeStates>
+</Action>
+</Actions>
+<NormalImage>
+<Filename>pvp.tsl</Filename>
+<UseTransColor>0</UseTransColor>
+<TransClr>16777215</TransClr>
+<TransTolerance>10</TransTolerance>
+<Opacity>100</Opacity>
+<HTMode>0</HTMode>
+</NormalImage>
+<MouseOverSndMode>0</MouseOverSndMode>
+<MouseOverSound/>
+<MouseClickSndMode>0</MouseClickSndMode>
+<MouseClickSound/>
+</Object>
 <HGuidelines/>
 <VGuidelines/>
 </Page>
@@ -1176,7 +1507,6 @@ Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink - "..ContentTitle)</Script
 		DialogEx.DeleteObject(Val)
 	end
 end
-
 Window.SetText(DialogEx.GetWndHandle(), "PVP AutoLink")</Script>
 <TreeStates>
 <TreeState>0</TreeState>

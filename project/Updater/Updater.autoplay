@@ -285,6 +285,11 @@ function Error(Message)
 	Paragraph.SetText("Status", "ERROR: "..Message)
 	Application.Sleep(2000)
 	Application.Exit()
+end
+if Registry.GetValue(HKEY_CURRENT_USER, "Software\\"..tostring(_CommandLineArgs[1]), "Theme"):upper() == "DARK" then
+	Application.SetPageProperties("Main", {BackgroundColor = Math.HexColorToNumber("111111")})
+	Progress.SetProperties("Major", {BackgroundColor = Math.HexColorToNumber("111111")})
+	Progress.SetProperties("Progress", {BackgroundColor = Math.HexColorToNumber("111111")})
 end</Script>
 <TreeStates>
 <TreeState>0</TreeState>
@@ -316,7 +321,8 @@ local function Download(BytesRead, FileSize, _1, _2, _3, Message)
 	end
 end
 local function Extract(CurFile, Percent, Status)
-	Paragraph.SetText("CurFile", "..."..CurFile:sub(CurFile:len() - 19, CurFile:len()))
+	local SplithPath = String.SplitPath(tostring(CurFile))
+	Paragraph.SetText("CurFile", SplithPath.Filename..SplithPath.Extension)
 	if Status == ZIP_STATUS_MAJOR then
 		Paragraph.SetText("Percent", Percent.."%")
 		Progress.SetCurrentPos("Major", Percent)
@@ -1164,7 +1170,7 @@ Please double-click on each item to find out how to install it.</DlgMsg>
 <BuildType>1</BuildType>
 <DriveLetter/>
 <UsePassword>0</UsePassword>
-<OpenFolder>0</OpenFolder>
+<OpenFolder>1</OpenFolder>
 <ObscureFilenames>1</ObscureFilenames>
 <ObscureDataFolder>updater</ObscureDataFolder>
 </ProgramPrefs>
